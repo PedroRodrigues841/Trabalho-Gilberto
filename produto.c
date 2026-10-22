@@ -2,6 +2,7 @@
 #include <string.h>
 
 #include "produto.h"
+#include "categoria.h"
 #include "util.h"
 
 enum { PESQ_CODIGO = 1, PESQ_NOME };
@@ -82,6 +83,24 @@ static int lerQuantidade(void) {
     }
 }
 
+static int lerCategoria(const Categoria categorias[], int totalCategorias) {
+    int codigo;
+
+    printf("\nCategorias disponiveis:\n");
+    listarCategorias(categorias, totalCategorias);
+
+    for (;;) {
+        codigo = lerInteiro("Codigo da categoria: ");
+
+        if (buscarCategoriaPorCodigo(categorias, totalCategorias, codigo)
+            == -1) {
+            printf("Categoria nao encontrada! Informe um codigo da lista.\n");
+        } else {
+            return codigo;
+        }
+    }
+}
+
 /* ===================== REGRAS DO PRODUTO ===================== */
 
 int lerOpcaoMenu(void) {
@@ -119,8 +138,15 @@ int buscarPorNome(const Produto lista[], int total, const char nome[]) {
 /* ===================== OPERACOES E TELAS ===================== */
 
 /* Cadastra na proxima posicao livre e devolve o novo total de produtos. */
-int cadastrarProduto(Produto lista[], int total) {
+int cadastrarProduto(Produto lista[], int total,
+                     const Categoria categorias[], int totalCategorias) {
     Produto *novo;
+
+    if (totalCategorias == 0) {
+        printf("\nNenhuma categoria cadastrada! Cadastre ao menos uma "
+               "categoria antes de cadastrar um produto.\n");
+        return total;
+    }
 
     if (total >= MAX_PRODUTOS) {
         printf("\nLista cheia! Limite de %d produtos atingido.\n", MAX_PRODUTOS);
@@ -135,15 +161,17 @@ int cadastrarProduto(Produto lista[], int total) {
     novo->prateleira = lerPrateleira();
     novo->preco = lerPreco();
     novo->quantidade = lerQuantidade();
+    novo->codigoCategoria = lerCategoria(categorias, totalCategorias);
     novo->disponivel = calcularDisponibilidade(novo->quantidade);
 
     printf("\n----- RESUMO DO PRODUTO CADASTRADO -----\n");
-    exibirProduto(*novo);
+    exibirProduto(*novo, categorias, totalCategorias);
 
     return total + 1;
 }
 
-void listarProdutos(const Produto lista[], int total) {
+void listarProdutos(const Produto lista[], int total,
+                    const Categoria categorias[], int totalCategorias) {
     int i;
 
     if (total == 0) {
@@ -153,13 +181,17 @@ void listarProdutos(const Produto lista[], int total) {
 
     printf("\n----- LISTA DE PRODUTOS (%d) -----\n", total);
     for (i = 0; i < total; i++) {
-        exibirProduto(lista[i]);
+        exibirProduto(lista[i], categorias, totalCategorias);
     }
 }
 
-void exibirProduto(Produto produto) {
+void exibirProduto(Produto produto,
+                   const Categoria categorias[], int totalCategorias) {
     printf("Codigo................: %d\n", produto.codigo);
     printf("Nome..................: %s\n", produto.nome);
+    printf("Categoria.............: %s\n",
+           nomeDaCategoria(categorias, totalCategorias,
+                           produto.codigoCategoria));
     printf("Prateleira............: %c\n", produto.prateleira);
     printf("Preco unitario........: %.2f\n", produto.preco);
     printf("Quantidade em estoque.: %d\n", produto.quantidade);
@@ -168,7 +200,8 @@ void exibirProduto(Produto produto) {
     printf("-----------------------------------------\n");
 }
 
-void pesquisarProduto(const Produto lista[], int total) {
+void pesquisarProduto(const Produto lista[], int total,
+                      const Categoria categorias[], int totalCategorias) {
     char nome[TAM_NOME];
     int tipo;
     int posicao;
@@ -195,6 +228,6 @@ void pesquisarProduto(const Produto lista[], int total) {
         printf("\nNenhum produto foi encontrado.\n");
     } else {
         printf("\n----- PRODUTO ENCONTRADO -----\n");
-        exibirProduto(lista[posicao]);
+        exibirProduto(lista[posicao], categorias, totalCategorias);
     }
 }

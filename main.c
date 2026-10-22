@@ -2,15 +2,23 @@
 #include <stdlib.h>
 
 #include "produto.h"
+#include "categoria.h"
+#include "arquivo.h"
 
-enum { OPC_CADASTRAR = 1, OPC_LISTAR, OPC_PESQUISAR, OPC_SAIR };
+enum { OPC_CADASTRAR = 1, OPC_LISTAR, OPC_PESQUISAR, OPC_CATEGORIAS, OPC_SAIR };
 
 void exibirMenu(void);
 
 int main(void) {
+    Categoria categorias[MAX_CATEGORIAS];
     Produto produtos[MAX_PRODUTOS];
-    int total = 0;
+    int totalCategorias;
+    int total;
     int opcao;
+
+    /* Carrega os dados salvos (lista vazia se os arquivos nao existirem). */
+    totalCategorias = carregarCategorias(categorias, MAX_CATEGORIAS);
+    total = carregarProdutos(produtos, MAX_PRODUTOS);
 
     do {
         exibirMenu();
@@ -18,16 +26,24 @@ int main(void) {
 
         switch (opcao) {
             case OPC_CADASTRAR:
-                total = cadastrarProduto(produtos, total);
+                total = cadastrarProduto(produtos, total,
+                                         categorias, totalCategorias);
+                salvarProdutos(produtos, total);
                 break;
             case OPC_LISTAR:
-                listarProdutos(produtos, total);
+                listarProdutos(produtos, total, categorias, totalCategorias);
                 break;
             case OPC_PESQUISAR:
-                pesquisarProduto(produtos, total);
+                pesquisarProduto(produtos, total, categorias, totalCategorias);
+                break;
+            case OPC_CATEGORIAS:
+                totalCategorias = menuCategorias(categorias, totalCategorias);
+                salvarCategorias(categorias, totalCategorias);
                 break;
             case OPC_SAIR:
-                printf("\nSaindo do sistema...\n");
+                salvarCategorias(categorias, totalCategorias);
+                salvarProdutos(produtos, total);
+                printf("\nDados salvos. Saindo do sistema...\n");
                 break;
             default:
                 printf("\nOpcao invalida! Tente novamente.\n");
@@ -43,6 +59,7 @@ void exibirMenu(void) {
     printf("%d - Cadastrar Produto\n", OPC_CADASTRAR);
     printf("%d - Listar Produtos\n", OPC_LISTAR);
     printf("%d - Pesquisar Produto\n", OPC_PESQUISAR);
+    printf("%d - Categorias\n", OPC_CATEGORIAS);
     printf("%d - Sair\n", OPC_SAIR);
     printf("===========================\n");
 }
