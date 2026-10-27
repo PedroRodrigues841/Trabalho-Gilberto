@@ -1,11 +1,13 @@
 #include <stdio.h>
 #include <string.h>
+#include <limits.h>
 
 #include "produto.h"
 #include "categoria.h"
 #include "util.h"
 
 enum { PESQ_CODIGO = 1, PESQ_NOME };
+enum { ESTOQUE_ENTRADA = 1, ESTOQUE_SAIDA };
 
 /* ===================== LEITURA DOS CAMPOS ===================== */
 
@@ -123,12 +125,24 @@ int buscarPorCodigo(const Produto lista[], int total, int codigo) {
     return NAO_ENCONTRADO;
 }
 
-/* Devolve a posicao do produto na lista ou NAO_ENCONTRADO (-1). */
+/* Igual a buscarPorCodigo, mas ignora produtos removidos. */
+int buscarAtivoPorCodigo(const Produto lista[], int total, int codigo) {
+    int i;
+
+    for (i = 0; i < total; i++) {
+        if (lista[i].ativo && lista[i].codigo == codigo) {
+            return i;
+        }
+    }
+    return NAO_ENCONTRADO;
+}
+
+/* Devolve a posicao do produto ativo na lista ou NAO_ENCONTRADO (-1). */
 int buscarPorNome(const Produto lista[], int total, const char nome[]) {
     int i;
 
     for (i = 0; i < total; i++) {
-        if (strcmp(lista[i].nome, nome) == 0) {
+        if (lista[i].ativo && strcmp(lista[i].nome, nome) == 0) {
             return i;
         }
     }
@@ -163,6 +177,7 @@ int cadastrarProduto(Produto lista[], int total,
     novo->quantidade = lerQuantidade();
     novo->codigoCategoria = lerCategoria(categorias, totalCategorias);
     novo->disponivel = calcularDisponibilidade(novo->quantidade);
+    novo->ativo = 1;
 
     printf("\n----- RESUMO DO PRODUTO CADASTRADO -----\n");
     exibirProduto(*novo, categorias, totalCategorias);
@@ -173,15 +188,24 @@ int cadastrarProduto(Produto lista[], int total,
 void listarProdutos(const Produto lista[], int total,
                     const Categoria categorias[], int totalCategorias) {
     int i;
+    int ativos = 0;
 
-    if (total == 0) {
+    for (i = 0; i < total; i++) {
+        if (lista[i].ativo) {
+            ativos++;
+        }
+    }
+
+    if (ativos == 0) {
         printf("\nNenhum produto foi cadastrado.\n");
         return;
     }
 
-    printf("\n----- LISTA DE PRODUTOS (%d) -----\n", total);
+    printf("\n----- LISTA DE PRODUTOS (%d) -----\n", ativos);
     for (i = 0; i < total; i++) {
-        exibirProduto(lista[i], categorias, totalCategorias);
+        if (lista[i].ativo) {
+            exibirProduto(lista[i], categorias, totalCategorias);
+        }
     }
 }
 
@@ -213,7 +237,7 @@ void pesquisarProduto(const Produto lista[], int total,
 
     switch (tipo) {
         case PESQ_CODIGO:
-            posicao = buscarPorCodigo(lista, total, lerInteiro("Codigo: "));
+            posicao = buscarAtivoPorCodigo(lista, total, lerInteiro("Codigo: "));
             break;
         case PESQ_NOME:
             lerNome(nome, sizeof(nome));
@@ -230,4 +254,78 @@ void pesquisarProduto(const Produto lista[], int total,
         printf("\n----- PRODUTO ENCONTRADO -----\n");
         exibirProduto(lista[posicao], categorias, totalCategorias);
     }
+}
+
+/* ===================== ESTOQUE E REMOCAO ===================== */
+
+void alterarEstoque(Produto lista[], int total) {
+    int posicao;
+    int tipo;
+    int quantidade;
+    Produto *p;
+
+    printf("\n----- ALTERAR ESTOQUE -----\n");
+    posicao = buscarAtivoPorCodigo(lista, total, lerInteiro("Codigo: "));
+
+    if (posicao == NAO_ENCONTRADO) {
+        printf("\nNenhum produto foi encontrado.\n");
+        return;
+    }
+
+    p = &lista[posicao];
+    printf("Produto: %s | Estoque atual: %d\n", p->nome, p->quantidade);
+    printf("%d - Entrada (chegada de mercadoria)\n", ESTOQUE_ENTRADA);
+    printf("%d - Saida (venda ou retirada)\n", ESTOQUE_SAIDA);
+    tipo = lerInteiro("Escolha o tipo de movimentacao: ");
+
+    if (tipo != ESTOQUE_ENTRADA && tipo != ESTOQUE_SAIDA) {
+        printf("\nOpcao invalida! Nada foi alterado.\n");
+        return;
+    }
+
+    for (;;) {
+        quantidade = lerInteiro("Quantidade: ");
+        if (!numeroPositivo(quantidade)) {
+            printf("Quantidade invalida! Deve ser maior que zero.\n");
+        } else {
+            break;
+        }
+    }
+
+    if (tipo == ESTOQUE_ENTRADA) {
+        if (quantidade > INT_MAX - p->quantidade) {
+            printf("\nQuantidade final fora do limite permitido. "
+                   "Nada foi alterado.\n");
+            return;
+        }
+        p->quantidade += quantidade;
+    } else {
+        if (quantidade > p->quantidade) {
+            printf("\nSaida maior que o estoque atual (%d)! "
+                   "Operacao nao realizada.\n", p->quantidade);
+            return;
+        }
+        p->quantidade -= quantidade;
+    }
+
+    p->disponivel = calcularDisponibilidade(p->quantidade);
+
+    printf("\nEstoque atualizado! Quantidade em estoque: %d | "
+           "Disponivel para venda: %s (%d)\n",
+           p->quantidade, p->disponivel ? "Sim" : "Nao", p->disponivel);
+}
+
+void removerProduto(Produto lista[], int total) {
+    int posicao;
+
+    printf("\n----- REMOVER PRODUTO -----\n");
+    posicao = buscarAtivoPorCodigo(lista, total, lerInteiro("Codigo: "));
+
+    if (posicao == NAO_ENCONTRADO) {
+        printf("\nNenhum produto foi encontrado.\n");
+        return;
+    }
+
+    lista[posicao].ativo = 0;
+    printf("\nProduto \"%s\" removido com sucesso.\n", lista[posicao].nome);
 }

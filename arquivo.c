@@ -78,8 +78,9 @@ int salvarCategorias(const Categoria lista[], int total) {
 
 /* ===================== PRODUTOS ===================== */
 /* Formato de cada linha:
-   codigo;prateleira;preco;quantidade;codigoCategoria;nome
-   (o nome fica por ultimo para poder conter qualquer caractere) */
+   codigo;prateleira;preco;quantidade;codigoCategoria;ativo;nome
+   (o nome fica por ultimo para poder conter qualquer caractere)
+   Arquivos antigos, sem o campo "ativo", tambem sao aceitos (ativo = 1). */
 
 int carregarProdutos(Produto lista[], int maximo) {
     FILE *arq;
@@ -98,12 +99,23 @@ int carregarProdutos(Produto lista[], int maximo) {
         removerQuebraDeLinha(linha);
 
         consumidos = 0;
-        lidos = sscanf(linha, "%d;%c;%f;%d;%d;%n", &p.codigo, &p.prateleira,
-                       &p.preco, &p.quantidade, &p.codigoCategoria,
-                       &consumidos);
+        p.ativo = 1;
+        lidos = sscanf(linha, "%d;%c;%f;%d;%d;%d;%n", &p.codigo,
+                       &p.prateleira, &p.preco, &p.quantidade,
+                       &p.codigoCategoria, &p.ativo, &consumidos);
 
-        if (lidos != 5 || consumidos == 0) {
-            continue; /* linha invalida */
+        if (lidos != 6 || consumidos == 0 ||
+            (p.ativo != 0 && p.ativo != 1)) {
+            /* Tenta o formato antigo (sem o campo "ativo"). */
+            consumidos = 0;
+            p.ativo = 1;
+            lidos = sscanf(linha, "%d;%c;%f;%d;%d;%n", &p.codigo,
+                           &p.prateleira, &p.preco, &p.quantidade,
+                           &p.codigoCategoria, &consumidos);
+
+            if (lidos != 5 || consumidos == 0) {
+                continue; /* linha invalida */
+            }
         }
         if (!numeroPositivo(p.codigo) || !numeroPositivo(p.preco) ||
             !numeroNaoNegativo(p.quantidade) ||
@@ -139,9 +151,9 @@ int salvarProdutos(const Produto lista[], int total) {
     }
 
     for (i = 0; i < total; i++) {
-        fprintf(arq, "%d;%c;%.6f;%d;%d;%s\n", lista[i].codigo,
+        fprintf(arq, "%d;%c;%.6f;%d;%d;%d;%s\n", lista[i].codigo,
                 lista[i].prateleira, lista[i].preco, lista[i].quantidade,
-                lista[i].codigoCategoria, lista[i].nome);
+                lista[i].codigoCategoria, lista[i].ativo, lista[i].nome);
     }
 
     fclose(arq);

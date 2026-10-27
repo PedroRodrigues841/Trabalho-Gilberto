@@ -5,7 +5,10 @@
 #include "categoria.h"
 #include "arquivo.h"
 
-enum { OPC_CADASTRAR = 1, OPC_LISTAR, OPC_PESQUISAR, OPC_CATEGORIAS, OPC_SAIR };
+enum {
+    OPC_CADASTRAR = 1, OPC_LISTAR, OPC_PESQUISAR, OPC_ESTOQUE,
+    OPC_REMOVER, OPC_CATEGORIAS, OPC_SAIR
+};
 
 void exibirMenu(void);
 
@@ -36,6 +39,14 @@ int main(void) {
             case OPC_PESQUISAR:
                 pesquisarProduto(produtos, total, categorias, totalCategorias);
                 break;
+            case OPC_ESTOQUE:
+                alterarEstoque(produtos, total);
+                salvarProdutos(produtos, total);
+                break;
+            case OPC_REMOVER:
+                removerProduto(produtos, total);
+                salvarProdutos(produtos, total);
+                break;
             case OPC_CATEGORIAS:
                 totalCategorias = menuCategorias(categorias, totalCategorias);
                 salvarCategorias(categorias, totalCategorias);
@@ -59,6 +70,8 @@ void exibirMenu(void) {
     printf("%d - Cadastrar Produto\n", OPC_CADASTRAR);
     printf("%d - Listar Produtos\n", OPC_LISTAR);
     printf("%d - Pesquisar Produto\n", OPC_PESQUISAR);
+    printf("%d - Alterar Estoque de um Produto\n", OPC_ESTOQUE);
+    printf("%d - Remover Produto\n", OPC_REMOVER);
     printf("%d - Categorias\n", OPC_CATEGORIAS);
     printf("%d - Sair\n", OPC_SAIR);
     printf("===========================\n");
